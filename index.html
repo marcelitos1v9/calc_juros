@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Juros</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            border: none;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        .result {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .table-responsive {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2>Calculadora de Juros</h2>
+            </div>
+            <div class="card-body">
+                <form id="interestForm">
+                    <div class="form-group">
+                        <label for="principal">Principal (P)</label>
+                        <input type="number" class="form-control" id="principal" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rate">Taxa de Juros Anual (%)</label>
+                        <input type="number" class="form-control" id="rate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="time">Tempo (anos)</label>
+                        <input type="number" class="form-control" id="time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="compoundFrequency">Frequência de Capitalização</label>
+                        <select class="form-control" id="compoundFrequency" required>
+                            <option value="1">Anual</option>
+                            <option value="2">Semestral</option>
+                            <option value="4">Trimestral</option>
+                            <option value="12">Mensal</option>
+                            <option value="365">Diária</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-block" onclick="calculateInterest()">Calcular Juros</button>
+                    <button type="button" class="btn btn-secondary btn-block mt-2" onclick="resetForm()">Limpar</button>
+                </form>
+                <div class="mt-4">
+                    <p class="result" id="simpleInterestResult"></p>
+                    <p class="result" id="compoundInterestResult"></p>
+                </div>
+                <div class="mt-4">
+                    <canvas id="interestChart"></canvas>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Ano</th>
+                                <th>Juros Simples (R$)</th>
+                                <th>Juros Compostos (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="interestTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let myChart; // Variável global para armazenar o objeto Chart
+
+        function calculateInterest() {
+            // Obtém os valores dos campos de entrada
+            const principal = parseFloat(document.getElementById('principal').value);
+            const rate = parseFloat(document.getElementById('rate').value);
+            const time = parseFloat(document.getElementById('time').value);
+            const compoundFrequency = parseFloat(document.getElementById('compoundFrequency').value);
+
+            // Validação básica
+            if (isNaN(principal) || isNaN(rate) || isNaN(time) || principal <= 0 || rate <= 0 || time <= 0) {
+                alert("Por favor, insira valores válidos.");
+                return;
+            }
+
+            // Calcula o juros simples
+            const simpleInterest = principal * rate / 100 * time;
+            document.getElementById('simpleInterestResult').innerText = `Juros Simples: R$ ${simpleInterest.toFixed(2)}`;
+
+            // Calcula o juros composto
+            const compoundInterest = principal * Math.pow((1 + rate / 100 / compoundFrequency), compoundFrequency * time) - principal;
+            document.getElementById('compoundInterestResult').innerText = `Juros Compostos: R$ ${compoundInterest.toFixed(2)}`;
+
+            // Dados para os gráficos e tabela
+            const labels = [];
+            const simpleInterestData = [];
+            const compoundInterestData = [];
+            const tableBody = document.getElementById('interestTableBody');
+            tableBody.innerHTML = "";
+
+            for (let i = 0; i <= time; i++) {
+                labels.push(i.toString());
+                simpleInterestData.push(principal + (principal * rate / 100 * i));
+                compoundInterestData.push(principal * Math.pow((1 + rate / 100 / compoundFrequency), compoundFrequency * i));
+                
+                // Adiciona linha na tabela
+                const row = `<tr>
+                                <td>${i}</td>
+                                <td>${simpleInterestData[i].toFixed(2)}</td>
+                                <td>${compoundInterestData[i].toFixed(2)}</td>
+                            </tr>`;
+                tableBody.insertAdjacentHTML('beforeend', row);
+            }
+
+            // Se o gráfico já existe, atualiza-o; senão, cria um novo
+            if (myChart) {
+                myChart.data.labels = labels;
+                myChart.data.datasets[0].data = simpleInterestData;
+                myChart.data.datasets[1].data = compoundInterestData;
+                myChart.update();
+            } else {
+                const ctx = document.getElementById('interestChart').getContext('2d');
+                myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Juros Simples',
+                                data: simpleInterestData,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 2,
+                                fill: false
+                            },
+                            {
+                                label: 'Juros Compostos',
+                                data: compoundInterestData,
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 2,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Tempo (anos)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Valor (R$)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('interestForm').reset();
+            document.getElementById('simpleInterestResult').innerText = '';
+            document.getElementById('compoundInterestResult').innerText = '';
+            document.getElementById('interestTableBody').innerHTML = '';
+
+            // Se o gráfico existe, limpa-o
+            if (myChart) {
+                myChart.destroy();
+                myChart = null;
+            }
+        }
+    </script>
+</body>
+</html>
